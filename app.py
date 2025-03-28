@@ -205,6 +205,8 @@ def index():
     return render_template('index.html')
 
 
+# Only updating the relevant part of app.py
+
 @app.route('/convert', methods=['POST'])
 @limiter.limit("3 per minute")  # Rate limit to prevent abuse
 def convert():
@@ -255,53 +257,65 @@ def convert():
         # Create GPX file
         gpx_data = create_gpx(coordinates, route_name, travel_mode)
 
-        # Check if we're using AJAX (normal flow) or not (form submit)
-        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-
         # Generate a secure filename with the route name
         safe_route_name = "".join(c if c.isalnum() or c in "-_. " else "_" for c in route_name)
         download_filename = f"{safe_route_name}_{datetime.now().strftime('%Y%m%d')}.gpx"
 
-        # For mobile compatibility, use the new handler to store the file
-        if hasattr(app, 'store_temp_file'):
+        # Detect if user is on mobile device
+        is_mobile = request.user_agent.platform in ['iphone', 'ipad', 'android'] or \
+                    'mobile' in request.user_agent.string.lower()
+
+        # Detect if user is specifically on iOS
+        is_ios = request.user_agent.platform in ['iphone', 'ipad']
+
+        # For mobile users, especially on iOS, use the helper page approach
+        if is_mobile:
             # Use the mobile handler to store the file
-            temp_id, temp_file_path = app.store_temp_file(gpx_data, download_filename)
+            if hasattr(app, 'store_temp_file'):
+                temp_id, temp_file_path = app.store_temp_file(gpx_data, download_filename)
 
-            # Provide debug info in development mode only
-            if app.debug:
-                app.logger.debug(f"Created temp file with ID: {temp_id}")
-                app.logger.debug(f"Extracted {len(coordinates)} waypoints")
-                app.logger.debug(f"Travel mode: {travel_mode}")
+                # Provide debug info in development mode only
+                if app.debug:
+                    app.logger.debug(f"Created temp file with ID: {temp_id} for mobile device")
+                    app.logger.debug(f"Device: {request.user_agent.platform}, is_mobile: {is_mobile}, is_ios: {is_ios}")
 
-            if is_ajax:
-                # For AJAX requests (modern browsers), send the file directly
-                response = send_file(
+                # For AJAX requests that support it, send a JSON response with link to download helper
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    helper_url = url_for('mobile_download_helper',
+                                         id=temp_id,
+                                         name=download_filename)
+                    return jsonify({
+                        "success": True,
+                        "message": "GPX fail on valmis allalaadimiseks!",
+                        "download_url": helper_url
+                    })
+                else:
+                    # For non-AJAX requests (fallback), redirect to the mobile helper page
+                    return redirect(url_for('mobile_download_helper',
+                                            id=temp_id,
+                                            name=download_filename))
+            else:
+                # Legacy approach if mobile handlers aren't available
+                temp_file_path = create_temp_gpx_file(gpx_data)
+
+                response = make_response(send_file(
                     temp_file_path,
                     as_attachment=True,
                     download_name=download_filename,
                     mimetype="application/gpx+xml"
-                )
+                ))
 
-                # Add additional headers for better mobile compatibility
+                # Add headers that help with mobile downloads
+                response.headers['Content-Disposition'] = f'attachment; filename="{download_filename}"'
+                response.headers['Content-Type'] = 'application/gpx+xml'
                 response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
                 response.headers['Pragma'] = 'no-cache'
                 response.headers['Expires'] = '0'
 
                 return response
-            else:
-                # For non-AJAX requests (fallback), redirect to the mobile helper page
-                return redirect(url_for('mobile_download_helper',
-                                        id=temp_id,
-                                        name=download_filename))
         else:
-            # Legacy approach if mobile handlers aren't available
-            # Save to secure temporary file (using your existing method)
+            # For desktop browsers, use the standard approach
             temp_file_path = create_temp_gpx_file(gpx_data)
-
-            # Provide debug info in development mode only
-            if app.debug:
-                app.logger.debug(f"Extracted {len(coordinates)} waypoints")
-                app.logger.debug(f"Travel mode: {travel_mode}")
 
             # Send the file
             response = send_file(
@@ -322,7 +336,6 @@ def convert():
         else:
             flash(f"Viga GPX genereerimisel: {str(e)}", "error")
             return redirect(url_for('index'))
-
 
 @app.route('/about')
 def about():

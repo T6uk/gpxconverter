@@ -109,6 +109,29 @@
             transform: translateY(-1px);
         }
 
+        .alternate-button {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: center;
+            transition: var(--transition);
+            margin-top: 1rem;
+            text-decoration: none;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .alternate-button:hover, .alternate-button:active {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
         .icon {
             font-size: 3rem;
             margin-bottom: 1rem;
@@ -123,6 +146,23 @@
 
         .home-link:hover {
             text-decoration: underline;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .note {
+            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            text-align: left;
+            margin: 1rem 0;
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
         }
 
         /* Animation for the download icon */
@@ -143,18 +183,46 @@
         <h1>GPX Fail on Valmis!</h1>
         <p>Sinu GPX-fail <strong>{{ filename }}</strong> on valmis allalaadimiseks.</p>
 
-        <a href="{{ download_url }}" download="{{ filename }}" class="download-button" id="download-button">
-            Laadi Alla GPX Fail
-        </a>
+        <div class="button-container">
+            <a href="{{ download_url }}" download="{{ filename }}" class="download-button" id="download-button">
+                Laadi Alla GPX Fail
+            </a>
 
+            {% if is_ios %}
+            <div class="note">
+                <strong>iOS seadme kasutajatele:</strong> Kui allalaadimisega on probleeme, puuduta nuppu ja siis jaga ikooni (□↑) ning vali "Salvesta fail" või "Jaga..."
+            </div>
+            {% endif %}
+
+            <!-- Alternate download method always visible as fallback -->
+            <a href="{{ direct_url }}" download="{{ filename }}" class="alternate-button" id="alternate-button">
+                Alternatiivne Allalaadimisviis
+            </a>
+        </div>
+
+        {% if is_ios %}
         <div class="instructions">
-            <h2>Kui allalaadimine ei alga automaatselt:</h2>
+            <h2>iPhone/iPad kasutajad:</h2>
             <ol>
                 <li>Puuduta ülalolevat rohelist nuppu</li>
-                <li>iOS seadmetel võidakse sulle näidata eelvaadet - sel juhul puuduta jagamise ikooni (□↑) ja vali "Salvesta fail"</li>
-                <li>Kui fail avaneb brauseris tekstina, siis hoia all nuppu ja vali "Salvesta link"</li>
+                <li>Kui näed teksti (XML), siis puuduta jagamise ikooni (□↑) ekraani allosas</li>
+                <li>Vali "Salvesta fail" või "Lisa failidesse"</li>
+                <li>Vali sobiv salvestuskoht (nt iCloud Drive või "Minu failid")</li>
             </ol>
         </div>
+        {% endif %}
+
+        {% if is_android %}
+        <div class="instructions">
+            <h2>Android kasutajad:</h2>
+            <ol>
+                <li>Puuduta ülalolevat rohelist nuppu</li>
+                <li>Kui fail ei laadi automaatselt alla, proovi alternatiivset nuppu</li>
+                <li>Vaata allalaaditud faile oma seadme allalaadimisnimekirjas</li>
+                <li>Probleemide korral pikalt vajuta nuppu ja vali "Salvesta link"</li>
+            </ol>
+        </div>
+        {% endif %}
 
         <div class="instructions">
             <h2>GPX-faili kasutamine:</h2>
@@ -170,9 +238,29 @@
     </div>
 
     <script>
+        // Function to handle iOS specific workarounds
+        function handleIOSDownload() {
+            var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+            if (isIOS) {
+                // On iOS, we need to make the file visible and let the user save it
+                // with the share sheet. We'll do this by showing instructions.
+                document.getElementById('download-button').addEventListener('click', function(e) {
+                    // We don't prevent default here - let iOS handle the click
+                    // Just make sure the user knows what to do next
+                    setTimeout(function() {
+                        alert('Kui fail avanes brauseris, vajuta jagamise ikooni (□↑) ja vali "Salvesta fail"');
+                    }, 1000);
+                });
+            }
+        }
+
         // Try to auto-download on page load
         document.addEventListener('DOMContentLoaded', function() {
-            // Wait a moment to ensure the page is fully loaded
+            // Handle special behavior for iOS
+            handleIOSDownload();
+
+            // Wait a moment to ensure the page is fully loaded, then trigger download
             setTimeout(function() {
                 document.getElementById('download-button').click();
             }, 500);

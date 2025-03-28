@@ -268,8 +268,12 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .error-message {
@@ -443,346 +447,375 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Google Maps GPX Konverter</h1>
-            <p>Konverdi Google Maps marsruudid GPX-failideks GPS-seadmetele</p>
-        </div>
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <div id="success-message" class="success-message"></div>
-        <div id="error-message" class="error-message"></div>
-        <div id="fallback-download" class="fallback-download"></div>
-
-        <form id="converter-form" action="/convert" method="post">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
-            <div class="form-group">
-                <label for="google_maps_url">Google Maps URL</label>
-                <input type="text" id="google_maps_url" name="google_maps_url"
-                       placeholder="Kleebi siia oma Google Mapsi URL..." required>
-            </div>
-
-            <div class="form-group">
-                <label for="password">Parool(et igasugused ligi ei pääseks)</label>
-                <input type="password" id="password" name="password"
-                       placeholder="Sisesta parool konverteerimiseks" required>
-            </div>
-
-            <div class="form-group">
-                <button type="button" id="instructions-toggle" class="toggle-button">Juhised ja Näidised</button>
-            </div>
-
-            <div id="instructions-panel" class="instructions-panel" style="display: none;">
-                <h3>Juhised:</h3>
-                <ol>
-                    <li>Mine <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps</a> lehele</li>
-                    <li>Koosta oma marsruut määrates algus- ja lõpp-punkti ning lisa vajadusel teekonnapunkte</li>
-                    <li>Kopeeri URL oma veebilehitseja aadressiribalt</li>
-                    <li>Kleebi URL ülaltoodud väljale, sisesta parool(üks,null,üks,null) ja kliki "Konverteeri GPX-iks"</li>
-                    <li>Salvesta allalaaditud GPX-fail oma seadmes kasutamiseks</li>
-                </ol>
-                <h4 style="margin-top: 1rem">Näpunäited paremate tulemuste saavutamiseks:</h4>
-                <ul>
-                    <li>Jalgsi, jalgratta või autoga liikumise marsruutide puhul veendu, et oled Google Mapsis valitud vastava liikumisviisi</li>
-                    <li>Lisa teekonnapunkte, et marsruut järgiks kindlat teed</li>
-                    <li>Konverter tuleb toime keerukate marsruutidega, mis sisaldavad mitut teekonnapunkti</li>
-                    <li>Garmin Connecti jaoks: Impordi GPX-fail "Kursusena" (Course), mitte "Tegevusena" (Activity)</li>
-                </ul>
-
-                <div class="examples-section">
-                    <h4>Näidis URL-id:</h4>
-                    <div class="example-item" onclick="setExampleUrl(this.textContent.trim())">
-                        https://www.google.com/maps/dir/Central+Park,+New+York,+NY/Times+Square,+Manhattan,+New+York,+NY/@40.7665565,-73.9905401,14z/data=!3m1!4b1!4m14!4m13!1m5!1m1!1s0x89c2589a018531e3:0xb9df1f7387a94119!2m2!1d-73.9651645!2d40.7828647!1m5!1m1!1s0x89c25855c6480299:0x55194ec5a1ae072e!2m2!1d-73.9855426!2d40.7579747!3e2
-                    </div>
-                    <div class="example-item" onclick="setExampleUrl(this.textContent.trim())">
-                        https://www.google.com/maps/dir/48.8584,2.2945/48.8606,2.3376/@48.8600367,2.3151752,15z/data=!3m1!4b1!4m2!4m1!3e2
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <button type="button" id="advanced-toggle" class="toggle-button">Täpsemad Seaded</button>
-            </div>
-
-            <div id="advanced-options" class="advanced-options" style="display: none;">
-                <div class="form-group">
-                    <label for="route_name">Marsruudi Nimi (valikuline)</label>
-                    <input type="text" id="route_name" name="route_name"
-                           placeholder="Sisesta oma marsruudile nimi">
-                </div>
-
-                <div class="api-key-section">
-                    <h4>Google API Võtme Olek:</h4>
-                    <div id="api-key-status" class="api-status">Kontrollimine...</div>
-                    <div class="api-key-instructions">
-                        <p>Teede korrektseks järgimiseks (sirgjooneliste ühenduste asemel) on vajalik Google API võti.</p>
-                        <p><a href="/api-key-instructions" target="_blank">Kliki siia Google API võtme seadistamise juhiste saamiseks</a></p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="progress-container" id="progress-container">
-                <div class="progress">
-                    <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%"></div>
-                </div>
-                <p id="progress-status">Töötlen sinu marsruuti...</p>
-            </div>
-
-            <div class="spinner" id="spinner"></div>
-
-            <div class="button-wrapper">
-                <button type="submit" class="button">Konverteeri GPX-iks</button>
-            </div>
-        </form>
+<div class="container">
+    <div class="header">
+        <h1>Google Maps GPX Konverter</h1>
+        <p>Konverdi Google Maps marsruudid GPX-failideks GPS-seadmetele</p>
     </div>
 
-    <footer>
-        <p>Google Maps GPX Konverter | <a href="/about">Meist</a> | <a href="https://github.com/yourusername/google-maps-to-gpx" target="_blank" rel="noopener">GitHub</a></p>
-    </footer>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="flash-message {{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
 
-    <script>
-        // Detect mobile browsers
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    <div id="success-message" class="success-message"></div>
+    <div id="error-message" class="error-message"></div>
+    <div id="fallback-download" class="fallback-download"></div>
 
-        function toggleAdvancedOptions() {
-            const options = document.getElementById('advanced-options');
-            const toggle = document.getElementById('advanced-toggle');
+    <form id="converter-form" action="/convert" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-            if (options.style.display === 'none') {
-                options.style.display = 'block';
-                toggle.classList.add('active');
+        <div class="form-group">
+            <label for="google_maps_url">Google Maps URL</label>
+            <input type="text" id="google_maps_url" name="google_maps_url"
+                   placeholder="Kleebi siia oma Google Mapsi URL..." required>
+        </div>
 
-                // Check API key status when advanced options are opened
-                checkApiKeyStatus();
-            } else {
-                options.style.display = 'none';
-                toggle.classList.remove('active');
-            }
+        <div class="form-group">
+            <label for="password">Parool(et igasugused ligi ei pääseks)</label>
+            <input type="password" id="password" name="password"
+                   placeholder="Sisesta parool konverteerimiseks" required>
+        </div>
+
+        <div class="form-group">
+            <button type="button" id="instructions-toggle" class="toggle-button">Juhised ja Näidised</button>
+        </div>
+
+        <div id="instructions-panel" class="instructions-panel" style="display: none;">
+            <h3>Juhised:</h3>
+            <ol>
+                <li>Mine <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps</a> lehele</li>
+                <li>Koosta oma marsruut määrates algus- ja lõpp-punkti ning lisa vajadusel teekonnapunkte</li>
+                <li>Kopeeri URL oma veebilehitseja aadressiribalt</li>
+                <li>Kleebi URL ülaltoodud väljale, sisesta parool(üks,null,üks,null) ja kliki "Konverteeri GPX-iks"</li>
+                <li>Salvesta allalaaditud GPX-fail oma seadmes kasutamiseks</li>
+            </ol>
+            <h4 style="margin-top: 1rem">Näpunäited paremate tulemuste saavutamiseks:</h4>
+            <ul>
+                <li>Jalgsi, jalgratta või autoga liikumise marsruutide puhul veendu, et oled Google Mapsis valitud
+                    vastava liikumisviisi
+                </li>
+                <li>Lisa teekonnapunkte, et marsruut järgiks kindlat teed</li>
+                <li>Konverter tuleb toime keerukate marsruutidega, mis sisaldavad mitut teekonnapunkti</li>
+                <li>Garmin Connecti jaoks: Impordi GPX-fail "Kursusena" (Course), mitte "Tegevusena" (Activity)</li>
+            </ul>
+
+            <div class="examples-section">
+                <h4>Näidis URL-id:</h4>
+                <div class="example-item" onclick="setExampleUrl(this.textContent.trim())">
+                    https://www.google.com/maps/dir/Central+Park,+New+York,+NY/Times+Square,+Manhattan,+New+York,+NY/@40.7665565,-73.9905401,14z/data=!3m1!4b1!4m14!4m13!1m5!1m1!1s0x89c2589a018531e3:0xb9df1f7387a94119!2m2!1d-73.9651645!2d40.7828647!1m5!1m1!1s0x89c25855c6480299:0x55194ec5a1ae072e!2m2!1d-73.9855426!2d40.7579747!3e2
+                </div>
+                <div class="example-item" onclick="setExampleUrl(this.textContent.trim())">
+                    https://www.google.com/maps/dir/48.8584,2.2945/48.8606,2.3376/@48.8600367,2.3151752,15z/data=!3m1!4b1!4m2!4m1!3e2
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <button type="button" id="advanced-toggle" class="toggle-button">Täpsemad Seaded</button>
+        </div>
+
+        <div id="advanced-options" class="advanced-options" style="display: none;">
+            <div class="form-group">
+                <label for="route_name">Marsruudi Nimi (valikuline)</label>
+                <input type="text" id="route_name" name="route_name"
+                       placeholder="Sisesta oma marsruudile nimi">
+            </div>
+
+            <div class="api-key-section">
+                <h4>Google API Võtme Olek:</h4>
+                <div id="api-key-status" class="api-status">Kontrollimine...</div>
+                <div class="api-key-instructions">
+                    <p>Teede korrektseks järgimiseks (sirgjooneliste ühenduste asemel) on vajalik Google API võti.</p>
+                    <p><a href="/api-key-instructions" target="_blank">Kliki siia Google API võtme seadistamise juhiste
+                        saamiseks</a></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-container" id="progress-container">
+            <div class="progress">
+                <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+            </div>
+            <p id="progress-status">Töötlen sinu marsruuti...</p>
+        </div>
+
+        <div class="spinner" id="spinner"></div>
+
+        <div class="button-wrapper">
+            <button type="submit" class="button">Konverteeri GPX-iks</button>
+        </div>
+    </form>
+</div>
+
+<footer>
+    <p>Google Maps GPX Konverter | <a href="/about">Meist</a> | <a
+            href="https://github.com/yourusername/google-maps-to-gpx" target="_blank" rel="noopener">GitHub</a></p>
+</footer>
+
+<script>
+    // Detect mobile browsers
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    function toggleAdvancedOptions() {
+        const options = document.getElementById('advanced-options');
+        const toggle = document.getElementById('advanced-toggle');
+
+        if (options.style.display === 'none') {
+            options.style.display = 'block';
+            toggle.classList.add('active');
+
+            // Check API key status when advanced options are opened
+            checkApiKeyStatus();
+        } else {
+            options.style.display = 'none';
+            toggle.classList.remove('active');
         }
+    }
 
-        function toggleInstructions() {
-            const panel = document.getElementById('instructions-panel');
-            const toggle = document.getElementById('instructions-toggle');
+    function toggleInstructions() {
+        const panel = document.getElementById('instructions-panel');
+        const toggle = document.getElementById('instructions-toggle');
 
-            if (panel.style.display === 'none') {
-                panel.style.display = 'block';
-                toggle.classList.add('active');
-            } else {
-                panel.style.display = 'none';
-                toggle.classList.remove('active');
-            }
+        if (panel.style.display === 'none') {
+            panel.style.display = 'block';
+            toggle.classList.add('active');
+        } else {
+            panel.style.display = 'none';
+            toggle.classList.remove('active');
         }
+    }
 
-        function checkApiKeyStatus() {
-            const statusElement = document.getElementById('api-key-status');
-            statusElement.textContent = 'Kontrollimine...';
-            statusElement.className = 'api-status';
+    function checkApiKeyStatus() {
+        const statusElement = document.getElementById('api-key-status');
+        statusElement.textContent = 'Kontrollimine...';
+        statusElement.className = 'api-status';
 
-            fetch('/api-key-status')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'active') {
-                        statusElement.textContent = 'Google API võti on konfigureeritud';
-                        statusElement.className = 'api-status active';
-                    } else {
-                        statusElement.textContent = 'Google API võtit ei leitud. Marsruudid kasutavad sirgjoonelisi ühendusi punktide vahel.';
-                        statusElement.className = 'api-status missing';
-                    }
-                })
-                .catch(error => {
-                    statusElement.textContent = 'Viga API võtme oleku kontrollimisel';
+        fetch('/api-key-status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'active') {
+                    statusElement.textContent = 'Google API võti on konfigureeritud';
+                    statusElement.className = 'api-status active';
+                } else {
+                    statusElement.textContent = 'Google API võtit ei leitud. Marsruudid kasutavad sirgjoonelisi ühendusi punktide vahel.';
                     statusElement.className = 'api-status missing';
-                });
+                }
+            })
+            .catch(error => {
+                statusElement.textContent = 'Viga API võtme oleku kontrollimisel';
+                statusElement.className = 'api-status missing';
+            });
+    }
+
+    function setExampleUrl(url) {
+        document.getElementById('google_maps_url').value = url;
+    }
+
+    function showError(message) {
+        const errorElement = document.getElementById('error-message');
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('progress-container').style.display = 'none';
+
+        // Scroll to error message on mobile
+        if (isMobile) {
+            errorElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+        }
+    }
+
+    function showSuccess(message) {
+        // Create success message element if it doesn't exist
+        let successElement = document.getElementById('success-message');
+        if (!successElement) {
+            successElement = document.createElement('div');
+            successElement.id = 'success-message';
+            successElement.className = 'success-message';
+            const formElement = document.getElementById('converter-form');
+            formElement.parentNode.insertBefore(successElement, formElement);
         }
 
-        function setExampleUrl(url) {
-            document.getElementById('google_maps_url').value = url;
+        successElement.textContent = message;
+        successElement.style.display = 'block';
+
+        // Scroll to success message on mobile
+        if (isMobile) {
+            successElement.scrollIntoView({behavior: 'smooth', block: 'center'});
         }
 
-        function showError(message) {
-            const errorElement = document.getElementById('error-message');
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
-            document.getElementById('spinner').style.display = 'none';
-            document.getElementById('progress-container').style.display = 'none';
+        // Hide after 5 seconds
+        setTimeout(() => {
+            successElement.style.display = 'none';
+        }, 5000);
+    }
 
-            // Scroll to error message on mobile
-            if (isMobile) {
-                errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-
-        function showSuccess(message) {
-            // Create success message element if it doesn't exist
-            let successElement = document.getElementById('success-message');
-            if (!successElement) {
-                successElement = document.createElement('div');
-                successElement.id = 'success-message';
-                successElement.className = 'success-message';
-                const formElement = document.getElementById('converter-form');
-                formElement.parentNode.insertBefore(successElement, formElement);
-            }
-
-            successElement.textContent = message;
-            successElement.style.display = 'block';
-
-            // Scroll to success message on mobile
-            if (isMobile) {
-                successElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-
-            // Hide after 5 seconds
-            setTimeout(() => {
-                successElement.style.display = 'none';
-            }, 5000);
-        }
-
-        function createFallbackDownloadLink(url, filename) {
-            const fallbackElement = document.getElementById('fallback-download');
-            fallbackElement.innerHTML = `
+    function createFallbackDownloadLink(url, filename) {
+        const fallbackElement = document.getElementById('fallback-download');
+        fallbackElement.innerHTML = `
                 <p>Kui allalaadimine ei alga automaatselt, kliki nuppu allpool:</p>
                 <a href="${url}" download="${filename}" class="button">Laadi alla GPX fail</a>
             `;
-            fallbackElement.style.display = 'block';
+        fallbackElement.style.display = 'block';
 
-            // Scroll to fallback button on mobile
-            if (isMobile) {
-                fallbackElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+        // Scroll to fallback button on mobile
+        if (isMobile) {
+            fallbackElement.scrollIntoView({behavior: 'smooth', block: 'center'});
         }
+    }
 
-        function simulateProgress() {
-            const progressBar = document.getElementById('progress-bar');
-            let width = 0;
+    function simulateProgress() {
+        const progressBar = document.getElementById('progress-bar');
+        let width = 0;
 
-            const interval = setInterval(() => {
-                if (width >= 90) {
-                    clearInterval(interval);
-                } else {
-                    width += Math.random() * 10;
-                    if (width > 90) width = 90;
-                    progressBar.style.width = width + '%';
-                }
-            }, 300);
-
-            return interval; // Return interval ID so we can clear it later
-        }
-
-        // Handle download response in a mobile-friendly way
-        function handleDownload(response) {
-            // Check if response is OK
-            if (!response.ok) {
-                throw new Error('Server responded with an error');
+        const interval = setInterval(() => {
+            if (width >= 90) {
+                clearInterval(interval);
+            } else {
+                width += Math.random() * 10;
+                if (width > 90) width = 90;
+                progressBar.style.width = width + '%';
             }
+        }, 300);
 
-            // Get filename from Content-Disposition header
-            const disposition = response.headers.get('Content-Disposition');
-            const filename = disposition ?
-                disposition.split('filename=')[1].replace(/"/g, '') :
-                'marsruut.gpx';
+        return interval; // Return interval ID so we can clear it later
+    }
 
-            return response.blob().then(blob => {
-                // Create object URL for the blob
-                const url = window.URL.createObjectURL(blob);
+    // Handle download response in a mobile-friendly way
+    function handleDownload(response) {
+        // Check if response is JSON (for the new mobile flow)
+        const contentType = response.headers.get('Content-Type');
 
-                if (isIOS) {
-                    // iOS needs special handling
-                    // Show guidance message first
-                    showSuccess('GPX fail on valmis! Allalaadimiseks kliki nuppu allpool.');
+        if (contentType && contentType.includes('application/json')) {
+            // This is our new mobile-optimized flow
+            return response.json().then(data => {
+                if (data.success && data.download_url) {
+                    // Show success message
+                    showSuccess(data.message || 'GPX fail on valmis!');
 
-                    // Create a visible download link that users can interact with
-                    createFallbackDownloadLink(url, filename);
-
-                    // On iOS, we can try to open the URL directly as well
-                    setTimeout(() => {
-                        window.location.href = url;
-                    }, 100);
-                } else {
-                    // Standard approach for other browsers
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-
-                    // Clean up
-                    setTimeout(() => {
-                        window.URL.revokeObjectURL(url);
-                        document.body.removeChild(a);
-                    }, 100);
-
-                    showSuccess('Marsruut edukalt konverteeritud! Allalaadimine algas.');
-
-                    // Also provide fallback for mobile devices where auto-download might fail
-                    if (isMobile && !isIOS) {
-                        createFallbackDownloadLink(url, filename);
+                    // For mobile devices, open the helper page
+                    if (isMobile) {
+                        window.location.href = data.download_url;
+                    } else {
+                        // For desktop, create a button that opens the download page
+                        createFallbackDownloadLink(data.download_url, 'marsruut.gpx');
                     }
+                    return;
+                } else if (data.error) {
+                    throw new Error(data.error);
                 }
             });
         }
 
-        // Initialize all event listeners when the DOM is fully loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('advanced-toggle').addEventListener('click', toggleAdvancedOptions);
-            document.getElementById('instructions-toggle').addEventListener('click', toggleInstructions);
+        // Check if response is OK for regular download
+        if (!response.ok) {
+            throw new Error('Server responded with an error');
+        }
 
-            // Add touch feedback for mobile
-            if (isMobile) {
-                const touchElements = document.querySelectorAll('.button, .toggle-button, .example-item');
-                touchElements.forEach(el => {
-                    el.addEventListener('touchstart', function() {
-                        this.style.opacity = '0.7';
-                    }, { passive: true });
+        // Original file download flow for non-mobile devices
+        // Get filename from Content-Disposition header
+        const disposition = response.headers.get('Content-Disposition');
+        const filename = disposition ?
+            disposition.split('filename=')[1].replace(/"/g, '') :
+            'marsruut.gpx';
 
-                    el.addEventListener('touchend', function() {
-                        this.style.opacity = '1';
-                    }, { passive: true });
-                });
+        return response.blob().then(blob => {
+            // Create object URL for the blob
+            const url = window.URL.createObjectURL(blob);
+
+            if (isIOS) {
+                // iOS needs special handling
+                // Show guidance message first
+                showSuccess('GPX fail on valmis! Allalaadimiseks kliki nuppu allpool.');
+
+                // Create a visible download link that users can interact with
+                createFallbackDownloadLink(url, filename);
+
+                // On iOS, we can try to open the URL directly as well
+                setTimeout(() => {
+                    window.location.href = url;
+                }, 100);
+            } else {
+                // Standard approach for other browsers
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+
+                // Clean up
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }, 100);
+
+                showSuccess('Marsruut edukalt konverteeritud! Allalaadimine algas.');
+
+                // Also provide fallback for mobile devices where auto-download might fail
+                if (isMobile && !isIOS) {
+                    createFallbackDownloadLink(url, filename);
+                }
             }
         });
+    }
 
-        document.getElementById('converter-form').addEventListener('submit', function(e) {
-            e.preventDefault(); // Prevent form submission
+    // Initialize all event listeners when the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('advanced-toggle').addEventListener('click', toggleAdvancedOptions);
+        document.getElementById('instructions-toggle').addEventListener('click', toggleInstructions);
 
-            // Reset any previous download links or messages
-            document.getElementById('success-message').style.display = 'none';
-            document.getElementById('error-message').style.display = 'none';
-            document.getElementById('fallback-download').style.display = 'none';
+        // Add touch feedback for mobile
+        if (isMobile) {
+            const touchElements = document.querySelectorAll('.button, .toggle-button, .example-item');
+            touchElements.forEach(el => {
+                el.addEventListener('touchstart', function () {
+                    this.style.opacity = '0.7';
+                }, {passive: true});
 
-            // Show spinner and progress indicators
-            document.getElementById('spinner').style.display = 'block';
-            document.getElementById('progress-container').style.display = 'block';
+                el.addEventListener('touchend', function () {
+                    this.style.opacity = '1';
+                }, {passive: true});
+            });
+        }
+    });
 
-            // Validate URL
-            const url = document.getElementById('google_maps_url').value;
-            if (!url.includes('google.com/maps') && !url.includes('goo.gl/maps')) {
-                showError('Palun sisesta kehtiv Google Maps URL');
-                return;
+    document.getElementById('converter-form').addEventListener('submit', function (e) {
+        e.preventDefault(); // Prevent form submission
+
+        // Reset any previous download links or messages
+        document.getElementById('success-message').style.display = 'none';
+        document.getElementById('error-message').style.display = 'none';
+        document.getElementById('fallback-download').style.display = 'none';
+
+        // Show spinner and progress indicators
+        document.getElementById('spinner').style.display = 'block';
+        document.getElementById('progress-container').style.display = 'block';
+
+        // Validate URL
+        const url = document.getElementById('google_maps_url').value;
+        if (!url.includes('google.com/maps') && !url.includes('goo.gl/maps')) {
+            showError('Palun sisesta kehtiv Google Maps URL');
+            return;
+        }
+
+        // Simulate progress for better UX - store the interval ID
+        const progressInterval = simulateProgress();
+
+        // Submit the form with AJAX to handle errors better
+        const formData = new FormData(this);
+
+        fetch('/convert', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
             }
-
-            // Simulate progress for better UX - store the interval ID
-            const progressInterval = simulateProgress();
-
-            // Submit the form with AJAX to handle errors better
-            const formData = new FormData(this);
-
-            fetch('/convert', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
+        })
             .then(response => {
                 if (!response.ok) {
                     if (response.status === 401) {
@@ -822,7 +855,7 @@
                 document.getElementById('progress-container').style.display = 'none';
                 document.getElementById('progress-bar').style.width = '0%';
             });
-        });
-    </script>
+    });
+</script>
 </body>
 </html>

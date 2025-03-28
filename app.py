@@ -32,6 +32,8 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
+# Password settings
+APP_PASSWORD = os.environ.get('APP_PASSWORD', 'gpxconverter2025')  # Default password if not set in .env
 
 # Setup logging
 def setup_logging(app):
@@ -120,7 +122,7 @@ def validate_google_maps_url(url):
     """
     # Check if URL is not empty
     if not url or not url.strip():
-        return False, "URL cannot be empty"
+        return False, "URL ei saa olla tühi"
 
     # Basic Google Maps URL validation
     valid_domains = [
@@ -132,11 +134,11 @@ def validate_google_maps_url(url):
     ]
 
     if not any(domain in url.lower() for domain in valid_domains):
-        return False, "This doesn't appear to be a Google Maps URL"
+        return False, "See ei tundu olevat Google Maps URL"
 
     # Advanced pattern matching for directions URLs
     if '/dir/' not in url and '@' not in url:
-        return False, "URL doesn't contain directions or map coordinates"
+        return False, "URL ei sisalda suunajuhiseid ega kaardi koordinaate"
 
     return True, ""
 
@@ -200,7 +202,16 @@ def index():
 @limiter.limit("3 per minute")  # Rate limit to prevent abuse
 def convert():
     google_maps_url = request.form.get('google_maps_url', '').strip()
-    route_name = request.form.get('route_name', '').strip() or "Google Maps Route"
+    route_name = request.form.get('route_name', '').strip() or "Google Maps Marsruut"
+    password = request.form.get('password', '').strip()
+
+    # Validate password - simple direct comparison with APP_PASSWORD
+    if password != APP_PASSWORD:
+        app.logger.warning(f"Invalid password attempt from {request.remote_addr}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": "Vale parool"}), 401
+        flash("Vale parool. Palun proovige uuesti.", "error")
+        return redirect(url_for('index'))
 
     # Validate the URL
     is_valid, error_message = validate_google_maps_url(google_maps_url)
@@ -219,11 +230,11 @@ def convert():
         coordinates = extract_coordinates_from_google_maps_url(google_maps_url)
     except Exception as e:
         app.logger.error(f"Error extracting coordinates: {str(e)}")
-        flash(f"Error processing URL: {str(e)}", "error")
+        flash(f"Viga URL töötlemisel: {str(e)}", "error")
         return redirect(url_for('index'))
 
     if not coordinates or len(coordinates) < 2:
-        flash("Could not extract route coordinates from URL. Please check the URL and try again.", "error")
+        flash("Ei õnnestunud URL-ist marsruudi koordinaate leida. Palun kontrollige URL-i ja proovige uuesti.", "error")
         return redirect(url_for('index'))
 
     try:
@@ -253,7 +264,7 @@ def convert():
 
     except Exception as e:
         app.logger.error(f"Error generating GPX: {str(e)}")
-        flash(f"Error generating GPX: {str(e)}", "error")
+        flash(f"Viga GPX genereerimisel: {str(e)}", "error")
         return redirect(url_for('index'))
 
 
@@ -274,10 +285,10 @@ def api_key_instructions():
 def api_key_status():
     """Check if API key is configured and return status"""
     if is_api_key_configured():
-        return jsonify({"status": "active", "message": "Google API key is configured"})
+        return jsonify({"status": "active", "message": "Google API võti on konfigureeritud"})
     else:
         return jsonify(
-            {"status": "missing", "message": "No Google API key found. Routes will use straight lines between points."})
+            {"status": "missing", "message": "Google API võtit ei leitud. Marsruudid kasutavad sirgjoonelisi ühendusi punktide vahel."})
 
 
 # Error handlers
@@ -297,8 +308,8 @@ def server_error(e):
 def ratelimit_handler(e):
     app.logger.warning(f"Rate limit exceeded: {request.remote_addr} - {request.path}")
     return jsonify({
-        "error": "Rate limit exceeded",
-        "message": "Too many requests. Please try again later."
+        "error": "Piirang ületatud",
+        "message": "Liiga palju päringuid. Palun proovige hiljem uuesti."
     }), 429
 
 
@@ -313,11 +324,11 @@ if __name__ == '__main__':
         with open(template_path, 'w', encoding='utf-8') as f:
             f.write('''
 <!DOCTYPE html>
-<html lang="en">
+<html lang="et">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google API Key Setup | Google Maps to GPX Converter</title>
+    <title>Google API Võtme Seadistamine | Google Maps GPX Konverter</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -395,53 +406,53 @@ if __name__ == '__main__':
 </head>
 <body>
     <div class="container">
-        <h1>Setting Up a Google API Key</h1>
+        <h1>Google API Võtme Seadistamine</h1>
 
         <div class="note">
-            <strong>Free Usage:</strong> Google provides a $200 monthly credit for Maps API usage, which is enough for approximately 40,000 route conversions per month at no cost.
+            <strong>Tasuta Kasutamine:</strong> Google pakub igakuiselt $200 krediiti Maps API kasutamiseks, millest piisab umbes 40 000 marsruudi konverteerimiseks kuus ilma lisakuluta.
         </div>
 
         <p>
-            To make the Google Maps to GPX converter follow roads properly (rather than just connecting waypoints 
-            with straight lines), you need to set up a Google API key with access to the Directions API.
+            Selleks, et Google Maps GPX konverter järgiks korrektselt teid (mitte ei ühendaks teekonnapunkte sirgjoonega), 
+            peate seadistama Google API võtme juurdepääsuga suunajuhiste (Directions) API-le.
         </p>
 
-        <h2>Step 1: Create a Google Cloud Platform Account</h2>
+        <h2>Samm 1: Looge Google Cloud Platform konto</h2>
         <ol>
-            <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Platform</a></li>
-            <li>Sign in with your Google account or create a new one</li>
-            <li>Create a new project (or use an existing one)</li>
+            <li>Minge <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Platform</a> lehele</li>
+            <li>Logige sisse oma Google kontoga või looge uus</li>
+            <li>Looge uus projekt (või kasutage olemasolevat)</li>
         </ol>
 
-        <h2>Step 2: Enable the Directions API</h2>
+        <h2>Samm 2: Aktiveerige Directions API</h2>
         <ol>
-            <li>In the Google Cloud Console, navigate to "APIs & Services" > "Library"</li>
-            <li>Search for "Directions API"</li>
-            <li>Click on "Directions API" in the results</li>
-            <li>Click "Enable"</li>
+            <li>Google Cloud Console'is navigeerige "APIs & Services" > "Library"</li>
+            <li>Otsige "Directions API"</li>
+            <li>Klikkige tulemuste seas "Directions API" peale</li>
+            <li>Klikkige "Enable"</li>
         </ol>
 
-        <h2>Step 3: Create an API Key</h2>
+        <h2>Samm 3: Looge API Võti</h2>
         <ol>
-            <li>Navigate to "APIs & Services" > "Credentials"</li>
-            <li>Click "Create Credentials" > "API key"</li>
-            <li>A new API key will be created. Copy this key.</li>
+            <li>Navigeerige "APIs & Services" > "Credentials"</li>
+            <li>Klikkige "Create Credentials" > "API key"</li>
+            <li>Luuakse uus API võti. Kopeerige see võti.</li>
         </ol>
 
-        <h2>Step 4: (Optional but Recommended) Restrict Your API Key</h2>
-        <p>For security, it's good practice to restrict your API key:</p>
+        <h2>Samm 4: (Valikuline, kuid Soovitatav) Piirake Oma API Võtit</h2>
+        <p>Turvalisuse huvides on hea tava piirata oma API võtit:</p>
         <ol>
-            <li>In the Credentials page, find your API key and click "Edit"</li>
-            <li>Under "Application restrictions", you can select "IP addresses" and add your IP address</li>
-            <li>Under "API restrictions", select "Restrict key" and choose "Directions API" from the dropdown</li>
-            <li>Click "Save"</li>
+            <li>Credentials lehel leidke oma API võti ja klikkige "Edit"</li>
+            <li>"Application restrictions" all valige "IP addresses" ja lisage oma IP-aadress</li>
+            <li>"API restrictions" all valige "Restrict key" ja valige rippmenüüst "Directions API"</li>
+            <li>Klikkige "Save"</li>
         </ol>
 
-        <h2>Step 5: Add the API Key to the Application</h2>
-        <p>There are two ways to add your API key to the application:</p>
+        <h2>Samm 5: Lisage API Võti Rakendusele</h2>
+        <p>API võtme lisamiseks rakendusse on kaks võimalust:</p>
 
-        <h3>Option 1: Environment Variable</h3>
-        <p>Set the <code>GOOGLE_MAPS_API_KEY</code> environment variable before running the application:</p>
+        <h3>Variant 1: Keskkonnamuutuja</h3>
+        <p>Määrake <code>GOOGLE_MAPS_API_KEY</code> keskkonnamuutuja enne rakenduse käivitamist:</p>
 
         <p><strong>Windows:</strong></p>
         <pre>set GOOGLE_MAPS_API_KEY=your_api_key_here</pre>
@@ -449,37 +460,37 @@ if __name__ == '__main__':
         <p><strong>macOS/Linux:</strong></p>
         <pre>export GOOGLE_MAPS_API_KEY=your_api_key_here</pre>
 
-        <h3>Option 2: Create a .env File</h3>
+        <h3>Variant 2: .env Faili Loomine</h3>
         <ol>
-            <li>Create a file named <code>.env</code> in the application directory</li>
-            <li>Add the following line to the file:
+            <li>Looge fail nimega <code>.env</code> rakenduse kataloogis</li>
+            <li>Lisage järgmine rida faili:
             <pre>GOOGLE_MAPS_API_KEY=your_api_key_here</pre>
             </li>
-            <li>Save the file</li>
+            <li>Salvestage fail</li>
         </ol>
 
-        <h2>Step 6: Restart the Application</h2>
-        <p>After setting up your API key, restart the application to apply the changes.</p>
+        <h2>Samm 6: Taaskäivitage Rakendus</h2>
+        <p>Pärast API võtme seadistamist taaskäivitage rakendus muudatuste rakendamiseks.</p>
 
-        <h2>Free Usage Limits</h2>
+        <h2>Tasuta Kasutamise Piirangud</h2>
         <ul>
-            <li>Google provides a <strong>$200 monthly credit</strong> for using Google Maps Platform APIs</li>
-            <li>The Directions API costs $5 per 1,000 requests</li>
-            <li>With the free credit, you can make approximately <strong>40,000 route conversions per month at no cost</strong></li>
-            <li>For most personal use, this should be more than enough</li>
+            <li>Google pakub <strong>$200 igakuist krediiti</strong> Google Maps Platform API-de kasutamiseks</li>
+            <li>Directions API maksab $5 iga 1000 päringu kohta</li>
+            <li>Tasuta krediidiga saate teha ligikaudu <strong>40 000 marsruudi konverteerimist kuus ilma kuluta</strong></li>
+            <li>Enamiku isikliku kasutuse jaoks peaks sellest piisama</li>
         </ul>
 
         <div class="note">
-            <strong>Note:</strong> If you exceed the free limits, you will need to enable billing in your Google Cloud account. Make sure to monitor your usage if you're concerned about costs.
+            <strong>Märkus:</strong> Kui ületate tasuta piirangud, peate oma Google Cloud kontol aktiveerima arvelduse. Kui olete kulude pärast mures, jälgige oma kasutust.
         </div>
 
         <div class="home-link">
-            <a href="/">&larr; Back to Converter</a>
+            <a href="/">&larr; Tagasi Konverterisse</a>
         </div>
     </div>
 
     <footer>
-        <p>Google Maps to GPX Converter | Made for outdoor enthusiasts</p>
+        <p>Google Maps GPX Konverter | Loodud matkahuvilistele</p>
     </footer>
 </body>
 </html>

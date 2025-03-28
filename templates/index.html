@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="et">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Maps to GPX Converter</title>
+    <title>Google Maps GPX Konverter</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -69,7 +69,8 @@
             font-size: 0.95rem;
         }
 
-        input[type="text"] {
+        input[type="text"],
+        input[type="password"] {
             width: 100%;
             padding: 0.8rem 1rem;
             border: 1px solid #ddd;
@@ -78,7 +79,8 @@
             transition: var(--transition);
         }
 
-        input[type="text"]:focus {
+        input[type="text"]:focus,
+        input[type="password"]:focus {
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
@@ -150,7 +152,8 @@
             color: #27ae60;
         }
 
-        .advanced-options {
+        .advanced-options,
+        .instructions-panel {
             margin-top: 1.5rem;
             padding: 1.5rem;
             background-color: #f8f9fa;
@@ -226,7 +229,7 @@
         }
 
         .examples-section {
-            margin-top: 2rem;
+            margin-top: 1.5rem;
         }
 
         .examples-section h4 {
@@ -391,8 +394,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Google Maps to GPX Converter</h1>
-            <p>Convert your Google Maps routes to GPX files for GPS devices</p>
+            <h1>Google Maps GPX Konverter</h1>
+            <p>Konverdi Google Maps marsruudid GPX-failideks GPS-seadmetele</p>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -412,26 +415,64 @@
             <div class="form-group">
                 <label for="google_maps_url">Google Maps URL</label>
                 <input type="text" id="google_maps_url" name="google_maps_url"
-                       placeholder="Paste your Google Maps URL here..." required>
+                       placeholder="Kleebi siia oma Google Mapsi URL..." required>
             </div>
 
             <div class="form-group">
-                <button type="button" id="advanced-toggle" class="toggle-button">Advanced Options</button>
+                <label for="password">Parool(et igasugused ligi ei pääseks)</label>
+                <input type="password" id="password" name="password"
+                       placeholder="Sisesta parool konverteerimiseks" required>
+            </div>
+
+            <div class="form-group">
+                <button type="button" id="instructions-toggle" class="toggle-button">Juhised ja Näidised</button>
+            </div>
+
+            <div id="instructions-panel" class="instructions-panel" style="display: none;">
+                <h3>Juhised:</h3>
+                <ol>
+                    <li>Mine <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps</a> lehele</li>
+                    <li>Koosta oma marsruut määrates algus- ja lõpp-punkti ning lisa vajadusel teekonnapunkte</li>
+                    <li>Kopeeri URL oma veebilehitseja aadressiribalt</li>
+                    <li>Kleebi URL ülaltoodud väljale, sisesta parool(üks,null,üks,null) ja kliki "Konverteeri GPX-iks"</li>
+                    <li>Salvesta allalaaditud GPX-fail oma seadmes kasutamiseks</li>
+                </ol>
+                <h4 style="margin-top: 1rem">Näpunäited paremate tulemuste saavutamiseks:</h4>
+                <ul>
+                    <li>Jalgsi, jalgratta või autoga liikumise marsruutide puhul veendu, et oled Google Mapsis valitud vastava liikumisviisi</li>
+                    <li>Lisa teekonnapunkte, et marsruut järgiks kindlat teed</li>
+                    <li>Konverter tuleb toime keerukate marsruutidega, mis sisaldavad mitut teekonnapunkti</li>
+                    <li>Garmin Connecti jaoks: Impordi GPX-fail "Kursusena" (Course), mitte "Tegevusena" (Activity)</li>
+                </ul>
+
+                <div class="examples-section">
+                    <h4>Näidis URL-id:</h4>
+                    <div class="example-item" onclick="setExampleUrl(this.textContent.trim())">
+                        https://www.google.com/maps/dir/Central+Park,+New+York,+NY/Times+Square,+Manhattan,+New+York,+NY/@40.7665565,-73.9905401,14z/data=!3m1!4b1!4m14!4m13!1m5!1m1!1s0x89c2589a018531e3:0xb9df1f7387a94119!2m2!1d-73.9651645!2d40.7828647!1m5!1m1!1s0x89c25855c6480299:0x55194ec5a1ae072e!2m2!1d-73.9855426!2d40.7579747!3e2
+                    </div>
+                    <div class="example-item" onclick="setExampleUrl(this.textContent.trim())">
+                        https://www.google.com/maps/dir/48.8584,2.2945/48.8606,2.3376/@48.8600367,2.3151752,15z/data=!3m1!4b1!4m2!4m1!3e2
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <button type="button" id="advanced-toggle" class="toggle-button">Täpsemad Seaded</button>
             </div>
 
             <div id="advanced-options" class="advanced-options" style="display: none;">
                 <div class="form-group">
-                    <label for="route_name">Route Name (optional)</label>
+                    <label for="route_name">Marsruudi Nimi (valikuline)</label>
                     <input type="text" id="route_name" name="route_name"
-                           placeholder="Enter a name for your route">
+                           placeholder="Sisesta oma marsruudile nimi">
                 </div>
 
                 <div class="api-key-section">
-                    <h4>Google API Key Status:</h4>
-                    <div id="api-key-status" class="api-status">Checking...</div>
+                    <h4>Google API Võtme Olek:</h4>
+                    <div id="api-key-status" class="api-status">Kontrollimine...</div>
                     <div class="api-key-instructions">
-                        <p>For routes that follow roads properly (instead of straight lines), you need a Google API key.</p>
-                        <p><a href="/api-key-instructions" target="_blank">Click here for instructions on setting up a Google API key</a></p>
+                        <p>Teede korrektseks järgimiseks (sirgjooneliste ühenduste asemel) on vajalik Google API võti.</p>
+                        <p><a href="/api-key-instructions" target="_blank">Kliki siia Google API võtme seadistamise juhiste saamiseks</a></p>
                     </div>
                 </div>
             </div>
@@ -440,66 +481,38 @@
                 <div class="progress">
                     <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%"></div>
                 </div>
-                <p id="progress-status">Processing your route...</p>
+                <p id="progress-status">Töötlen sinu marsruuti...</p>
             </div>
 
             <div class="spinner" id="spinner"></div>
 
             <div class="button-wrapper">
-                <button type="submit" class="button">Convert to GPX</button>
+                <button type="submit" class="button">Konverteeri GPX-iks</button>
             </div>
         </form>
 
         <div class="preview-container" id="preview-container">
-            <h3>Route Preview</h3>
+            <h3>Marsruudi Eelvaade</h3>
             <div id="map-preview"></div>
             <div id="route-stats">
                 <div class="stat-item">
-                    <span class="stat-label">Distance:</span>
+                    <span class="stat-label">Vahemaa:</span>
                     <span id="route-distance" class="stat-value">--</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">Estimated Time:</span>
+                    <span class="stat-label">Hinnanguline Aeg:</span>
                     <span id="route-time" class="stat-value">--</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">Waypoints:</span>
+                    <span class="stat-label">Teekonnapunktid:</span>
                     <span id="route-waypoints" class="stat-value">--</span>
                 </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h3>Instructions:</h3>
-            <ol>
-                <li>Go to <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps</a></li>
-                <li>Create your route by setting start and end points, and add waypoints if needed</li>
-                <li>Copy the URL from your browser's address bar</li>
-                <li>Paste the URL in the field above and click "Convert to GPX"</li>
-                <li>Save the downloaded GPX file to use on your device</li>
-            </ol>
-            <h4 style="margin-top: 1rem">Tips for better results:</h4>
-            <ul>
-                <li>For walking, cycling or driving routes, make sure to select that mode in Google Maps</li>
-                <li>Add waypoints to make your route follow a specific path</li>
-                <li>The converter handles complex routes with multiple waypoints</li>
-                <li>For Garmin Connect: Import the GPX file as a "Course" rather than an "Activity"</li>
-            </ul>
-        </div>
-
-        <div class="examples-section">
-            <h4>Example URLs:</h4>
-            <div class="example-item" onclick="setExampleUrl(this.textContent.trim())">
-                https://www.google.com/maps/dir/Central+Park,+New+York,+NY/Times+Square,+Manhattan,+New+York,+NY/@40.7665565,-73.9905401,14z/data=!3m1!4b1!4m14!4m13!1m5!1m1!1s0x89c2589a018531e3:0xb9df1f7387a94119!2m2!1d-73.9651645!2d40.7828647!1m5!1m1!1s0x89c25855c6480299:0x55194ec5a1ae072e!2m2!1d-73.9855426!2d40.7579747!3e2
-            </div>
-            <div class="example-item" onclick="setExampleUrl(this.textContent.trim())">
-                https://www.google.com/maps/dir/48.8584,2.2945/48.8606,2.3376/@48.8600367,2.3151752,15z/data=!3m1!4b1!4m2!4m1!3e2
             </div>
         </div>
     </div>
 
     <footer>
-        <p>Google Maps to GPX Converter | <a href="/about">About</a> | <a href="https://github.com/yourusername/google-maps-to-gpx" target="_blank" rel="noopener">GitHub</a></p>
+        <p>Google Maps GPX Konverter | <a href="/about">Meist</a> | <a href="https://github.com/yourusername/google-maps-to-gpx" target="_blank" rel="noopener">GitHub</a></p>
     </footer>
 
     <script>
@@ -519,24 +532,37 @@
             }
         }
 
+        function toggleInstructions() {
+            const panel = document.getElementById('instructions-panel');
+            const toggle = document.getElementById('instructions-toggle');
+
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                toggle.classList.add('active');
+            } else {
+                panel.style.display = 'none';
+                toggle.classList.remove('active');
+            }
+        }
+
         function checkApiKeyStatus() {
             const statusElement = document.getElementById('api-key-status');
-            statusElement.textContent = 'Checking...';
+            statusElement.textContent = 'Kontrollimine...';
             statusElement.className = 'api-status';
 
             fetch('/api-key-status')
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'active') {
-                        statusElement.textContent = data.message;
+                        statusElement.textContent = 'Google API võti on konfigureeritud';
                         statusElement.className = 'api-status active';
                     } else {
-                        statusElement.textContent = data.message;
+                        statusElement.textContent = 'Google API võtit ei leitud. Marsruudid kasutavad sirgjoonelisi ühendusi punktide vahel.';
                         statusElement.className = 'api-status missing';
                     }
                 })
                 .catch(error => {
-                    statusElement.textContent = 'Error checking API key status';
+                    statusElement.textContent = 'Viga API võtme oleku kontrollimisel';
                     statusElement.className = 'api-status missing';
                 });
         }
@@ -589,6 +615,7 @@
         }
 
         document.getElementById('advanced-toggle').addEventListener('click', toggleAdvancedOptions);
+        document.getElementById('instructions-toggle').addEventListener('click', toggleInstructions);
 
         document.getElementById('converter-form').addEventListener('submit', function(e) {
             e.preventDefault(); // Prevent form submission
@@ -601,7 +628,7 @@
             // Validate URL
             const url = document.getElementById('google_maps_url').value;
             if (!url.includes('google.com/maps') && !url.includes('goo.gl/maps')) {
-                showError('Please enter a valid Google Maps URL');
+                showError('Palun sisesta kehtiv Google Maps URL');
                 return;
             }
 
@@ -620,8 +647,11 @@
             })
             .then(response => {
                 if (!response.ok) {
+                    if (response.status === 401) {
+                        throw new Error('Vale parool');
+                    }
                     return response.json().then(data => {
-                        throw new Error(data.error || 'Error converting route');
+                        throw new Error(data.error || 'Viga marsruudi konverteerimisel');
                     });
                 }
 
@@ -629,7 +659,7 @@
                 const disposition = response.headers.get('Content-Disposition');
                 const filename = disposition ?
                     disposition.split('filename=')[1].replace(/"/g, '') :
-                    'route.gpx';
+                    'marsruut.gpx';
 
                 return response.blob().then(blob => {
                     // Create download link
@@ -643,11 +673,11 @@
                     window.URL.revokeObjectURL(url);
 
                     // Show success message
-                    showSuccess('Route converted successfully! Download started.');
+                    showSuccess('Marsruut edukalt konverteeritud! Allalaadimine algas.');
                 });
             })
             .catch(error => {
-                showError(error.message || 'Error converting route. Please try again.');
+                showError(error.message || 'Viga marsruudi konverteerimisel. Palun proovi uuesti.');
             })
             .finally(() => {
                 // Hide progress indicators

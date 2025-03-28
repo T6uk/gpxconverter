@@ -3,6 +3,28 @@ import requests
 import urllib.parse
 import os
 from datetime import datetime
+from flask import current_app
+
+
+def log_error(message, exception=None):
+    """
+    Log errors in a consistent way
+
+    Parameters:
+    message (str): Error message
+    exception (Exception, optional): Exception object
+    """
+    if exception:
+        error_details = f"{message}: {str(exception)}"
+        if hasattr(current_app, 'logger'):
+            current_app.logger.error(error_details)
+        else:
+            print(error_details)  # Fallback if outside Flask context
+    else:
+        if hasattr(current_app, 'logger'):
+            current_app.logger.error(message)
+        else:
+            print(message)  # Fallback if outside Flask context
 
 
 def extract_coordinates_from_google_maps_url(url):
@@ -18,10 +40,15 @@ def extract_coordinates_from_google_maps_url(url):
     # Handle shortened URLs (e.g., goo.gl links)
     if any(domain in url for domain in ['goo.gl/maps', 'maps.app.goo.gl']):
         try:
-            response = requests.get(url, allow_redirects=True)
+            session = requests.Session()
+            session.headers.update({
+                'User-Agent': 'Mozilla/5.0 (compatible; GoogleMapsToGPXConverter/1.0)'
+            })
+            response = session.get(url, allow_redirects=True, timeout=10)
             url = response.url
         except Exception as e:
-            print(f"Error expanding shortened URL: {e}")
+            log_error("Error expanding shortened URL", e)
+            raise ValueError(f"Unable to expand shortened URL: {str(e)}")
 
     # Extract all waypoints from the URL's 'dir/' section
     waypoints = []
@@ -57,11 +84,12 @@ def extract_coordinates_from_google_maps_url(url):
                         if coords:
                             waypoints.append(coords)
                 except Exception as e:
-                    print(f"Error geocoding place name '{element}': {e}")
+                    log_error(f"Error geocoding place name '{element}'", e)
 
     # Extract the travel mode for better information
     travel_mode = extract_travel_mode(url)
-    print(f"Detected travel mode: {travel_mode}")
+    if hasattr(current_app, 'logger'):
+        current_app.logger.info(f"Detected travel mode: {travel_mode}")
 
     # If we have waypoints, use them to get the full route with road-following
     if waypoints and len(waypoints) >= 2:
@@ -82,7 +110,7 @@ def extract_coordinates_from_google_maps_url(url):
                 middle_waypoints
             )
         else:
-            print("No Google API key found. Road-following routes require an API key.")
+            log_error("No Google API key found. Road-following routes require an API key.")
             return waypoints
 
     # If we couldn't extract waypoints or only have one waypoint, try more patterns
@@ -115,8 +143,9 @@ def extract_coordinates_from_google_maps_url(url):
         return waypoints
 
     # If we got here, we couldn't extract anything useful
-    print("Could not extract coordinates from URL")
-    return None
+    log_error("Could not extract coordinates from URL")
+    raise ValueError(
+        "Unable to extract coordinates from the provided URL. Please ensure it's a valid Google Maps directions URL.")
 
 
 def extract_travel_mode(url):
@@ -159,17 +188,20 @@ def geocode_address(address):
     """
     try:
         # Use Nominatim (OpenStreetMap) for geocoding
-        response = requests.get(
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": "GoogleMapsToGPXConverter/1.0",
+            "Accept-Language": "en-US,en;q=0.9"
+        })
+
+        response = session.get(
             "https://nominatim.openstreetmap.org/search",
             params={
                 "q": address,
                 "format": "json",
                 "limit": 1
             },
-            headers={
-                "User-Agent": "GoogleMapsToGPXConverter/1.0",
-                "Accept-Language": "en-US,en;q=0.9"
-            }
+            timeout=10
         )
 
         # Check if we got a successful response
@@ -178,7 +210,7 @@ def geocode_address(address):
             if data and len(data) > 0:
                 return (float(data[0]['lat']), float(data[0]['lon']))
     except Exception as e:
-        print(f"Geocoding error: {e}")
+        log_error(f"Geocoding error for address '{address}'", e)
 
     return None
 
@@ -187,7 +219,7 @@ def get_directions_from_google_api(start_lat, start_lon, end_lat, end_lon, mode=
     """
     Get detailed route waypoints from Google Directions API
 
-    Note: Requires a valid Google API key stored in the GOOGLE_API_KEY environment variable
+    Note: Requires a valid Google API key stored in the GOOGLE_MAPS_API_KEY environment variable
 
     Parameters:
     start_lat (float): Starting point latitude
@@ -203,7 +235,7 @@ def get_directions_from_google_api(start_lat, start_lon, end_lat, end_lon, mode=
     api_key = os.environ.get('GOOGLE_MAPS_API_KEY')
 
     if not api_key:
-        print("No Google API key found. Using direct line between points.")
+        log_error("No Google API key found. Using direct line between points.")
         # No API key, return direct line
         if waypoints and len(waypoints) > 0:
             # If we have waypoints, include them in the direct path
@@ -243,8 +275,14 @@ def get_directions_from_google_api(start_lat, start_lon, end_lat, end_lon, mode=
             waypoints_str = "|".join([f"{lat},{lon}" for lat, lon in waypoints])
             params["waypoints"] = waypoints_str
 
-        # Make the request
-        response = requests.get(url, params=params)
+        # Make the request with proper timeouts and headers
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": "GoogleMapsToGPXConverter/1.0",
+            "Accept-Language": "en-US,en;q=0.9"
+        })
+
+        response = session.get(url, params=params, timeout=15)
         data = response.json()
 
         if data['status'] == 'OK':
@@ -281,8 +319,7 @@ def get_directions_from_google_api(start_lat, start_lon, end_lat, end_lon, mode=
 
             return deduplicated
         else:
-            print(f"Google Directions API error: {data['status']}")
-            print(f"For mode: {google_mode}")
+            log_error(f"Google Directions API error: {data['status']} for mode: {google_mode}")
             # Fall back to direct line
             if waypoints and len(waypoints) > 0:
                 result = [(start_lat, start_lon)]
@@ -293,7 +330,7 @@ def get_directions_from_google_api(start_lat, start_lon, end_lat, end_lon, mode=
                 return [(start_lat, start_lon), (end_lat, end_lon)]
 
     except Exception as e:
-        print(f"Error with Google Directions API: {e}")
+        log_error(f"Error with Google Directions API", e)
         # Fall back to direct line
         if waypoints and len(waypoints) > 0:
             result = [(start_lat, start_lon)]

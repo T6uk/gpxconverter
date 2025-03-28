@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Error | Google Maps to GPX Converter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #e74c3c;
+            --primary-dark: #c0392b;
+            --text-color: #333;
+            --text-light: #7f8c8d;
+            --bg-color: #f5f9fc;
+            --card-bg: #ffffff;
+            --border-radius: 8px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .error-title {
+            font-size: 6rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+            line-height: 1;
+        }
+
+        .error-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+        }
+
+        p {
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+        }
+
+        .home-button {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .home-button:hover {
+            background-color: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        .error-details {
+            background-color: #fef8f8;
+            border-left: 4px solid var(--primary-color);
+            padding: 1rem;
+            text-align: left;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        footer {
+            margin-top: 3rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-title">500</div>
+        <div class="error-subtitle">Server Error</div>
+        <p>Something went wrong on our end. Please try again later.</p>
+
+        <div class="error-details">
+            <p>The error has been logged and we're working to fix it.</p>
+            <p>If the problem persists, please try a different Google Maps URL or contact support.</p>
+        </div>
+
+        <a href="/" class="home-button">Return Home</a>
+    </div>
+    <footer>
+        <p>Google Maps to GPX Converter</p>
+    </footer>
+</body>
+</html>

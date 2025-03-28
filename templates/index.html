@@ -277,6 +277,89 @@
             display: none;
         }
 
+        .success-message {
+            color: var(--success-color);
+            text-align: center;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            background-color: #eafaf1;
+            border-radius: var(--border-radius);
+            display: none;
+        }
+
+        .progress-container {
+            margin: 1.5rem 0;
+            display: none;
+        }
+
+        .progress {
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        #progress-status {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            text-align: center;
+        }
+
+        .preview-container {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background-color: #f8f9fa;
+            border-radius: var(--border-radius);
+            display: none;
+        }
+
+        .preview-container h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        #map-preview {
+            height: 300px;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            background-color: #e9ecef;
+        }
+
+        #route-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-item {
+            padding: 1rem;
+            background-color: #fff;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #2c3e50;
+        }
+
         footer {
             text-align: center;
             margin-top: 3rem;
@@ -320,7 +403,12 @@
             {% endif %}
         {% endwith %}
 
+        <div id="success-message" class="success-message"></div>
+        <div id="error-message" class="error-message"></div>
+
         <form id="converter-form" action="/convert" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
             <div class="form-group">
                 <label for="google_maps_url">Google Maps URL</label>
                 <input type="text" id="google_maps_url" name="google_maps_url"
@@ -348,7 +436,13 @@
                 </div>
             </div>
 
-            <div class="error-message" id="error-message"></div>
+            <div class="progress-container" id="progress-container">
+                <div class="progress">
+                    <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <p id="progress-status">Processing your route...</p>
+            </div>
+
             <div class="spinner" id="spinner"></div>
 
             <div class="button-wrapper">
@@ -356,10 +450,29 @@
             </div>
         </form>
 
+        <div class="preview-container" id="preview-container">
+            <h3>Route Preview</h3>
+            <div id="map-preview"></div>
+            <div id="route-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Distance:</span>
+                    <span id="route-distance" class="stat-value">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Estimated Time:</span>
+                    <span id="route-time" class="stat-value">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Waypoints:</span>
+                    <span id="route-waypoints" class="stat-value">--</span>
+                </div>
+            </div>
+        </div>
+
         <div class="card">
             <h3>Instructions:</h3>
             <ol>
-                <li>Go to <a href="https://maps.google.com" target="_blank">Google Maps</a></li>
+                <li>Go to <a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps</a></li>
                 <li>Create your route by setting start and end points, and add waypoints if needed</li>
                 <li>Copy the URL from your browser's address bar</li>
                 <li>Paste the URL in the field above and click "Convert to GPX"</li>
@@ -386,7 +499,7 @@
     </div>
 
     <footer>
-        <p>Google Maps to GPX Converter | <a href="/about">About</a> | <a href="https://github.com/yourusername/google-maps-to-gpx" target="_blank">GitHub</a></p>
+        <p>Google Maps to GPX Converter | <a href="/about">About</a> | <a href="https://github.com/yourusername/google-maps-to-gpx" target="_blank" rel="noopener">GitHub</a></p>
     </footer>
 
     <script>
@@ -432,21 +545,116 @@
             document.getElementById('google_maps_url').value = url;
         }
 
+        function showError(message) {
+            const errorElement = document.getElementById('error-message');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('progress-container').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            // Create success message element if it doesn't exist
+            let successElement = document.getElementById('success-message');
+            if (!successElement) {
+                successElement = document.createElement('div');
+                successElement.id = 'success-message';
+                successElement.className = 'success-message';
+                const formElement = document.getElementById('converter-form');
+                formElement.parentNode.insertBefore(successElement, formElement);
+            }
+
+            successElement.textContent = message;
+            successElement.style.display = 'block';
+
+            // Hide after 5 seconds
+            setTimeout(() => {
+                successElement.style.display = 'none';
+            }, 5000);
+        }
+
+        function simulateProgress() {
+            const progressBar = document.getElementById('progress-bar');
+            let width = 0;
+
+            const interval = setInterval(() => {
+                if (width >= 90) {
+                    clearInterval(interval);
+                } else {
+                    width += Math.random() * 10;
+                    if (width > 90) width = 90;
+                    progressBar.style.width = width + '%';
+                }
+            }, 300);
+        }
+
         document.getElementById('advanced-toggle').addEventListener('click', toggleAdvancedOptions);
 
         document.getElementById('converter-form').addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent form submission
+
             // Show spinner, hide any previous errors
             document.getElementById('spinner').style.display = 'block';
             document.getElementById('error-message').style.display = 'none';
+            document.getElementById('progress-container').style.display = 'block';
 
             // Validate URL
             const url = document.getElementById('google_maps_url').value;
-            if (!url.includes('google.com/maps')) {
-                e.preventDefault();
-                document.getElementById('spinner').style.display = 'none';
-                document.getElementById('error-message').textContent = 'Please enter a valid Google Maps URL';
-                document.getElementById('error-message').style.display = 'block';
+            if (!url.includes('google.com/maps') && !url.includes('goo.gl/maps')) {
+                showError('Please enter a valid Google Maps URL');
+                return;
             }
+
+            // Simulate progress for better UX
+            simulateProgress();
+
+            // Submit the form with AJAX to handle errors better
+            const formData = new FormData(this);
+
+            fetch('/convert', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Error converting route');
+                    });
+                }
+
+                // Handle successful file download
+                const disposition = response.headers.get('Content-Disposition');
+                const filename = disposition ?
+                    disposition.split('filename=')[1].replace(/"/g, '') :
+                    'route.gpx';
+
+                return response.blob().then(blob => {
+                    // Create download link
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+
+                    // Show success message
+                    showSuccess('Route converted successfully! Download started.');
+                });
+            })
+            .catch(error => {
+                showError(error.message || 'Error converting route. Please try again.');
+            })
+            .finally(() => {
+                // Hide progress indicators
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('progress-container').style.display = 'none';
+                document.getElementById('progress-bar').style.width = '0%';
+            });
         });
     </script>
 </body>

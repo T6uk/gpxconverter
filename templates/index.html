@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps to GPX Converter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-dark: #2980b9;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --text-color: #333;
+            --text-light: #7f8c8d;
+            --bg-color: #f5f9fc;
+            --card-bg: #ffffff;
+            --border-radius: 8px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-light);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .button {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .button-wrapper {
+            display: flex;
+            justify-content: center;
+            margin: 1.5rem 0;
+        }
+
+        .card {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .card ol, .card ul {
+            padding-left: 1.5rem;
+        }
+
+        .card li {
+            margin-bottom: 0.5rem;
+        }
+
+        .flash-message {
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+        }
+
+        .flash-message.error {
+            background-color: #fdeded;
+            border-left: 4px solid var(--error-color);
+            color: #a93226;
+        }
+
+        .flash-message.success {
+            background-color: #eafaf1;
+            border-left: 4px solid var(--success-color);
+            color: #27ae60;
+        }
+
+        .advanced-options {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background-color: #f8f9fa;
+            border-radius: var(--border-radius);
+            border: 1px dashed #ddd;
+        }
+
+        .toggle-button {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .toggle-button:hover {
+            text-decoration: underline;
+        }
+
+        .toggle-button::after {
+            content: "›";
+            display: inline-block;
+            margin-left: 0.25rem;
+            font-size: 1.2rem;
+            transform: rotate(90deg);
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-button.active::after {
+            transform: rotate(-90deg);
+        }
+
+        .api-key-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+
+        .api-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            border-radius: 100px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin: 0.5rem 0;
+        }
+
+        .api-status.active {
+            background-color: #eafaf1;
+            color: #27ae60;
+        }
+
+        .api-status.active::before {
+            content: "✓";
+            margin-right: 0.5rem;
+            font-weight: bold;
+        }
+
+        .api-status.missing {
+            background-color: #fdeded;
+            color: #e74c3c;
+        }
+
+        .api-status.missing::before {
+            content: "✗";
+            margin-right: 0.5rem;
+            font-weight: bold;
+        }
+
+        .examples-section {
+            margin-top: 2rem;
+        }
+
+        .examples-section h4 {
+            margin-bottom: 1rem;
+        }
+
+        .example-item {
+            font-size: 0.875rem;
+            padding: 0.75rem 1rem;
+            background-color: #f1f5f9;
+            border-radius: var(--border-radius);
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .example-item:hover {
+            background-color: #e8f0fe;
+            transform: translateY(-1px);
+        }
+
+        .spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border-left-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: var(--error-color);
+            text-align: center;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            background-color: #fdeded;
+            border-radius: var(--border-radius);
+            display: none;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #eee;
+            color: var(--text-light);
+        }
+
+        footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            .button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Google Maps to GPX Converter</h1>
+            <p>Convert your Google Maps routes to GPX files for GPS devices</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form id="converter-form" action="/convert" method="post">
+            <div class="form-group">
+                <label for="google_maps_url">Google Maps URL</label>
+                <input type="text" id="google_maps_url" name="google_maps_url"
+                       placeholder="Paste your Google Maps URL here..." required>
+            </div>
+
+            <div class="form-group">
+                <button type="button" id="advanced-toggle" class="toggle-button">Advanced Options</button>
+            </div>
+
+            <div id="advanced-options" class="advanced-options" style="display: none;">
+                <div class="form-group">
+                    <label for="route_name">Route Name (optional)</label>
+                    <input type="text" id="route_name" name="route_name"
+                           placeholder="Enter a name for your route">
+                </div>
+
+                <div class="api-key-section">
+                    <h4>Google API Key Status:</h4>
+                    <div id="api-key-status" class="api-status">Checking...</div>
+                    <div class="api-key-instructions">
+                        <p>For routes that follow roads properly (instead of straight lines), you need a Google API key.</p>
+                        <p><a href="/api-key-instructions" target="_blank">Click here for instructions on setting up a Google API key</a></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="error-message" id="error-message"></div>
+            <div class="spinner" id="spinner"></div>
+
+            <div class="button-wrapper">
+                <button type="submit" class="button">Convert to GPX</button>
+            </div>
+        </form>
+
+        <div class="card">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Go to <a href="https://maps.google.com" target="_blank">Google Maps</a></li>
+                <li>Create your route by setting start and end points, and add waypoints if needed</li>
+                <li>Copy the URL from your browser's address bar</li>
+                <li>Paste the URL in the field above and click "Convert to GPX"</li>
+                <li>Save the downloaded GPX file to use on your device</li>
+            </ol>
+            <h4 style="margin-top: 1rem">Tips for better results:</h4>
+            <ul>
+                <li>For walking, cycling or driving routes, make sure to select that mode in Google Maps</li>
+                <li>Add waypoints to make your route follow a specific path</li>
+                <li>The converter handles complex routes with multiple waypoints</li>
+                <li>For Garmin Connect: Import the GPX file as a "Course" rather than an "Activity"</li>
+            </ul>
+        </div>
+
+        <div class="examples-section">
+            <h4>Example URLs:</h4>
+            <div class="example-item" onclick="setExampleUrl(this.textContent.trim())">
+                https://www.google.com/maps/dir/Central+Park,+New+York,+NY/Times+Square,+Manhattan,+New+York,+NY/@40.7665565,-73.9905401,14z/data=!3m1!4b1!4m14!4m13!1m5!1m1!1s0x89c2589a018531e3:0xb9df1f7387a94119!2m2!1d-73.9651645!2d40.7828647!1m5!1m1!1s0x89c25855c6480299:0x55194ec5a1ae072e!2m2!1d-73.9855426!2d40.7579747!3e2
+            </div>
+            <div class="example-item" onclick="setExampleUrl(this.textContent.trim())">
+                https://www.google.com/maps/dir/48.8584,2.2945/48.8606,2.3376/@48.8600367,2.3151752,15z/data=!3m1!4b1!4m2!4m1!3e2
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Google Maps to GPX Converter | <a href="/about">About</a> | <a href="https://github.com/yourusername/google-maps-to-gpx" target="_blank">GitHub</a></p>
+    </footer>
+
+    <script>
+        function toggleAdvancedOptions() {
+            const options = document.getElementById('advanced-options');
+            const toggle = document.getElementById('advanced-toggle');
+
+            if (options.style.display === 'none') {
+                options.style.display = 'block';
+                toggle.classList.add('active');
+
+                // Check API key status when advanced options are opened
+                checkApiKeyStatus();
+            } else {
+                options.style.display = 'none';
+                toggle.classList.remove('active');
+            }
+        }
+
+        function checkApiKeyStatus() {
+            const statusElement = document.getElementById('api-key-status');
+            statusElement.textContent = 'Checking...';
+            statusElement.className = 'api-status';
+
+            fetch('/api-key-status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'active') {
+                        statusElement.textContent = data.message;
+                        statusElement.className = 'api-status active';
+                    } else {
+                        statusElement.textContent = data.message;
+                        statusElement.className = 'api-status missing';
+                    }
+                })
+                .catch(error => {
+                    statusElement.textContent = 'Error checking API key status';
+                    statusElement.className = 'api-status missing';
+                });
+        }
+
+        function setExampleUrl(url) {
+            document.getElementById('google_maps_url').value = url;
+        }
+
+        document.getElementById('advanced-toggle').addEventListener('click', toggleAdvancedOptions);
+
+        document.getElementById('converter-form').addEventListener('submit', function(e) {
+            // Show spinner, hide any previous errors
+            document.getElementById('spinner').style.display = 'block';
+            document.getElementById('error-message').style.display = 'none';
+
+            // Validate URL
+            const url = document.getElementById('google_maps_url').value;
+            if (!url.includes('google.com/maps')) {
+                e.preventDefault();
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('error-message').textContent = 'Please enter a valid Google Maps URL';
+                document.getElementById('error-message').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

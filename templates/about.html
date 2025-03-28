@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About | Google Maps to GPX Converter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-dark: #2980b9;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --text-color: #333;
+            --text-light: #7f8c8d;
+            --bg-color: #f5f9fc;
+            --card-bg: #ffffff;
+            --border-radius: 8px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-light);
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin: 2rem 0 1rem;
+            font-weight: 600;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            color: #2c3e50;
+            margin: 1.5rem 0 0.75rem;
+            font-weight: 600;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        ol, ul {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .device-card {
+            background-color: #f8f9fa;
+            padding: 1.25rem;
+            border-radius: var(--border-radius);
+            border-left: 3px solid var(--primary-color);
+            transition: var(--transition);
+        }
+
+        .device-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .device-card h4 {
+            margin-top: 0;
+            margin-bottom: 0.75rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .device-card ul {
+            margin-bottom: 0;
+            padding-left: 1.25rem;
+        }
+
+        .alert {
+            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 1.25rem;
+            border-radius: var(--border-radius);
+            margin: 1.5rem 0;
+        }
+
+        .alert strong {
+            color: #f39c12;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .button {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: center;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .back-link {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0 1rem;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #eee;
+            color: var(--text-light);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            .device-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>About Google Maps to GPX Converter</h1>
+            <p>A simple tool for outdoor enthusiasts and adventurers</p>
+        </div>
+
+        <p>
+            This tool allows you to convert Google Maps routes into GPX files that can be used with various
+            GPS devices, fitness trackers, and navigation apps. It's especially useful for planning routes
+            for hiking, running, cycling, or any other outdoor activity that requires navigation.
+        </p>
+
+        <h2>How It Works</h2>
+        <p>
+            The converter extracts waypoints from Google Maps URLs and converts them into the GPX (GPS Exchange Format)
+            format. GPX is a common standard for exchanging GPS data between applications and devices.
+        </p>
+        <p>
+            When you paste a Google Maps URL, the application:
+        </p>
+        <ol>
+            <li>Extracts all waypoints from the URL</li>
+            <li>Detects the travel mode (walking, cycling, driving)</li>
+            <li>Creates a GPX file with proper track segments and metadata</li>
+            <li>Delivers the file for you to download and use on your device</li>
+        </ol>
+
+        <h2>Compatible Devices</h2>
+        <p>
+            The GPX files generated by this tool should work with most GPS-capable devices and apps, including:
+        </p>
+
+        <div class="device-grid">
+            <div class="device-card">
+                <h4>Garmin Devices</h4>
+                <ul>
+                    <li>Garmin Connect</li>
+                    <li>Forerunner series</li>
+                    <li>Fenix series</li>
+                    <li>Edge series</li>
+                </ul>
+            </div>
+
+            <div class="device-card">
+                <h4>Suunto Devices</h4>
+                <ul>
+                    <li>Suunto App</li>
+                    <li>Ambit series</li>
+                    <li>Spartan series</li>
+                    <li>9 series</li>
+                </ul>
+            </div>
+
+            <div class="device-card">
+                <h4>Other Brands</h4>
+                <ul>
+                    <li>Polar watches</li>
+                    <li>Wahoo Fitness</li>
+                    <li>Samsung Galaxy watches</li>
+                    <li>Apple Watch (via apps)</li>
+                </ul>
+            </div>
+
+            <div class="device-card">
+                <h4>Mobile Apps</h4>
+                <ul>
+                    <li>Strava</li>
+                    <li>AllTrails</li>
+                    <li>Komoot</li>
+                    <li>ViewRanger/Outdooractive</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>Road-Following Routes</h2>
+        <div class="alert">
+            <strong>Important Note</strong>
+            <p>For the converter to follow roads (instead of straight lines between points),
+            you need to set up a Google API key. This is necessary for compatibility with GPS devices like Garmin.</p>
+            <p>Configure your API key in the advanced options section on the converter page.</p>
+        </div>
+
+        <h2>Tips for Garmin Connect</h2>
+        <p>
+            If you're using Garmin Connect:
+        </p>
+        <ol>
+            <li>In Garmin Connect, go to "Training" → "Courses" → "Import"</li>
+            <li>Select the GPX file downloaded from this converter</li>
+            <li>Save it as a course (not an activity)</li>
+            <li>Sync your Garmin device</li>
+            <li>On your device, find the course under navigation or training options</li>
+        </ol>
+
+        <div class="back-link">
+            <a href="/" class="button">← Back to Converter</a>
+        </div>
+    </div>
+
+    <footer>
+        <p>Google Maps to GPX Converter | Made with ❤️ for outdoor enthusiasts</p>
+    </footer>
+</body>
+</html>

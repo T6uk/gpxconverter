@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Laadi alla GPX fail | Google Maps GPX Konverter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-dark: #2980b9;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --text-color: #333;
+            --text-light: #7f8c8d;
+            --bg-color: #f5f9fc;
+            --card-bg: #ffffff;
+            --border-radius: 8px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 100%;
+            width: 500px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            font-size: 1.75rem;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .instructions {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--primary-color);
+            text-align: left;
+        }
+
+        .instructions h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .instructions ol {
+            padding-left: 1.5rem;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+
+        .download-button {
+            display: inline-block;
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: center;
+            transition: var(--transition);
+            margin-top: 1rem;
+            text-decoration: none;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .download-button:hover, .download-button:active {
+            background-color: #27ae60;
+            transform: translateY(-1px);
+        }
+
+        .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--success-color);
+        }
+
+        .home-link {
+            margin-top: 2rem;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .home-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Animation for the download icon */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon animate-pulse">⬇️</div>
+        <h1>GPX Fail on Valmis!</h1>
+        <p>Sinu GPX-fail <strong>{{ filename }}</strong> on valmis allalaadimiseks.</p>
+
+        <a href="{{ download_url }}" download="{{ filename }}" class="download-button" id="download-button">
+            Laadi Alla GPX Fail
+        </a>
+
+        <div class="instructions">
+            <h2>Kui allalaadimine ei alga automaatselt:</h2>
+            <ol>
+                <li>Puuduta ülalolevat rohelist nuppu</li>
+                <li>iOS seadmetel võidakse sulle näidata eelvaadet - sel juhul puuduta jagamise ikooni (□↑) ja vali "Salvesta fail"</li>
+                <li>Kui fail avaneb brauseris tekstina, siis hoia all nuppu ja vali "Salvesta link"</li>
+            </ol>
+        </div>
+
+        <div class="instructions">
+            <h2>GPX-faili kasutamine:</h2>
+            <ol>
+                <li>Salvesta GPX-fail oma seadmesse</li>
+                <li>Impordi fail oma lemmik GPS-rakendusse (Garmin Connect, Strava, Komoot jne)</li>
+                <li>Garmin Connect: Vali "Kursused" > "Impordi" ja vali see GPX-fail</li>
+                <li>Nautige marsruudi kasutamist!</li>
+            </ol>
+        </div>
+
+        <a href="/" class="home-link">← Tagasi Konverterisse</a>
+    </div>
+
+    <script>
+        // Try to auto-download on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait a moment to ensure the page is fully loaded
+            setTimeout(function() {
+                document.getElementById('download-button').click();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

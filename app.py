@@ -32,8 +32,15 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
+# Import mobile download handlers (add this file)
+from mobile_download import register_mobile_download_routes
+
+# Register mobile routes and get helper functions
+mobile_handlers = register_mobile_download_routes(app)
+
 # Password settings
 APP_PASSWORD = os.environ.get('APP_PASSWORD', 'gpxconverter2025')  # Default password if not set in .env
+
 
 # Setup logging
 def setup_logging(app):
@@ -216,6 +223,8 @@ def convert():
     # Validate the URL
     is_valid, error_message = validate_google_maps_url(google_maps_url)
     if not is_valid:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": error_message}), 400
         flash(error_message, "error")
         return redirect(url_for('index'))
 
@@ -230,42 +239,89 @@ def convert():
         coordinates = extract_coordinates_from_google_maps_url(google_maps_url)
     except Exception as e:
         app.logger.error(f"Error extracting coordinates: {str(e)}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": f"Viga URL töötlemisel: {str(e)}"}), 400
         flash(f"Viga URL töötlemisel: {str(e)}", "error")
         return redirect(url_for('index'))
 
     if not coordinates or len(coordinates) < 2:
-        flash("Ei õnnestunud URL-ist marsruudi koordinaate leida. Palun kontrollige URL-i ja proovige uuesti.", "error")
+        error_msg = "Ei õnnestunud URL-ist marsruudi koordinaate leida. Palun kontrollige URL-i ja proovige uuesti."
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": error_msg}), 400
+        flash(error_msg, "error")
         return redirect(url_for('index'))
 
     try:
         # Create GPX file
         gpx_data = create_gpx(coordinates, route_name, travel_mode)
 
-        # Save to secure temporary file
-        temp_file_path = create_temp_gpx_file(gpx_data)
+        # Check if we're using AJAX (normal flow) or not (form submit)
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
         # Generate a secure filename with the route name
         safe_route_name = "".join(c if c.isalnum() or c in "-_. " else "_" for c in route_name)
         download_filename = f"{safe_route_name}_{datetime.now().strftime('%Y%m%d')}.gpx"
 
-        # Provide some debug info in development mode only
-        if app.debug:
-            app.logger.debug(f"Extracted {len(coordinates)} waypoints")
-            app.logger.debug(f"Travel mode: {travel_mode}")
+        # For mobile compatibility, use the new handler to store the file
+        if hasattr(app, 'store_temp_file'):
+            # Use the mobile handler to store the file
+            temp_id, temp_file_path = app.store_temp_file(gpx_data, download_filename)
 
-        response = send_file(
-            temp_file_path,
-            as_attachment=True,
-            download_name=download_filename,
-            mimetype="application/gpx+xml"
-        )
+            # Provide debug info in development mode only
+            if app.debug:
+                app.logger.debug(f"Created temp file with ID: {temp_id}")
+                app.logger.debug(f"Extracted {len(coordinates)} waypoints")
+                app.logger.debug(f"Travel mode: {travel_mode}")
 
-        return response
+            if is_ajax:
+                # For AJAX requests (modern browsers), send the file directly
+                response = send_file(
+                    temp_file_path,
+                    as_attachment=True,
+                    download_name=download_filename,
+                    mimetype="application/gpx+xml"
+                )
+
+                # Add additional headers for better mobile compatibility
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
+
+                return response
+            else:
+                # For non-AJAX requests (fallback), redirect to the mobile helper page
+                return redirect(url_for('mobile_download_helper',
+                                        id=temp_id,
+                                        name=download_filename))
+        else:
+            # Legacy approach if mobile handlers aren't available
+            # Save to secure temporary file (using your existing method)
+            temp_file_path = create_temp_gpx_file(gpx_data)
+
+            # Provide debug info in development mode only
+            if app.debug:
+                app.logger.debug(f"Extracted {len(coordinates)} waypoints")
+                app.logger.debug(f"Travel mode: {travel_mode}")
+
+            # Send the file
+            response = send_file(
+                temp_file_path,
+                as_attachment=True,
+                download_name=download_filename,
+                mimetype="application/gpx+xml"
+            )
+
+            return response
 
     except Exception as e:
         app.logger.error(f"Error generating GPX: {str(e)}")
-        flash(f"Viga GPX genereerimisel: {str(e)}", "error")
-        return redirect(url_for('index'))
+
+        # Different response based on request type
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": f"Viga GPX genereerimisel: {str(e)}"}), 500
+        else:
+            flash(f"Viga GPX genereerimisel: {str(e)}", "error")
+            return redirect(url_for('index'))
 
 
 @app.route('/about')
@@ -288,7 +344,8 @@ def api_key_status():
         return jsonify({"status": "active", "message": "Google API võti on konfigureeritud"})
     else:
         return jsonify(
-            {"status": "missing", "message": "Google API võtit ei leitud. Marsruudid kasutavad sirgjoonelisi ühendusi punktide vahel."})
+            {"status": "missing",
+             "message": "Google API võtit ei leitud. Marsruudid kasutavad sirgjoonelisi ühendusi punktide vahel."})
 
 
 # Error handlers
@@ -311,6 +368,18 @@ def ratelimit_handler(e):
         "error": "Piirang ületatud",
         "message": "Liiga palju päringuid. Palun proovige hiljem uuesti."
     }), 429
+
+
+# Add a mobile detection utility
+@app.context_processor
+def utility_processor():
+    def is_mobile_device():
+        """Detect if the user is on a mobile device via User-Agent"""
+        user_agent = request.headers.get('User-Agent', '').lower()
+        mobile_keywords = ['android', 'iphone', 'ipad', 'ipod', 'windows phone', 'mobile', 'tablet']
+        return any(keyword in user_agent for keyword in mobile_keywords)
+
+    return dict(is_mobile_device=is_mobile_device)
 
 
 if __name__ == '__main__':
@@ -492,6 +561,195 @@ if __name__ == '__main__':
     <footer>
         <p>Google Maps GPX Konverter | Loodud matkahuvilistele</p>
     </footer>
+</body>
+</html>
+            ''')
+
+    # Check if mobile_download.html exists, create if not
+    mobile_download_path = os.path.join('templates', 'mobile_download.html')
+    if not os.path.exists(mobile_download_path):
+        with open(mobile_download_path, 'w', encoding='utf-8') as f:
+            f.write('''
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Laadi alla GPX fail | Google Maps GPX Konverter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-dark: #2980b9;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --text-color: #333;
+            --text-light: #7f8c8d;
+            --bg-color: #f5f9fc;
+            --card-bg: #ffffff;
+            --border-radius: 8px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 100%;
+            width: 500px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            font-size: 1.75rem;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .instructions {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--primary-color);
+            text-align: left;
+        }
+
+        .instructions h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .instructions ol {
+            padding-left: 1.5rem;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+
+        .download-button {
+            display: inline-block;
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: center;
+            transition: var(--transition);
+            margin-top: 1rem;
+            text-decoration: none;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .download-button:hover, .download-button:active {
+            background-color: #27ae60;
+            transform: translateY(-1px);
+        }
+
+        .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--success-color);
+        }
+
+        .home-link {
+            margin-top: 2rem;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .home-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Animation for the download icon */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon animate-pulse">⬇️</div>
+        <h1>GPX Fail on Valmis!</h1>
+        <p>Sinu GPX-fail <strong>{{ filename }}</strong> on valmis allalaadimiseks.</p>
+
+        <a href="{{ download_url }}" download="{{ filename }}" class="download-button" id="download-button">
+            Laadi Alla GPX Fail
+        </a>
+
+        <div class="instructions">
+            <h2>Kui allalaadimine ei alga automaatselt:</h2>
+            <ol>
+                <li>Puuduta ülalolevat rohelist nuppu</li>
+                <li>iOS seadmetel võidakse sulle näidata eelvaadet - sel juhul puuduta jagamise ikooni (□↑) ja vali "Salvesta fail"</li>
+                <li>Kui fail avaneb brauseris tekstina, siis hoia all nuppu ja vali "Salvesta link"</li>
+            </ol>
+        </div>
+
+        <div class="instructions">
+            <h2>GPX-faili kasutamine:</h2>
+            <ol>
+                <li>Salvesta GPX-fail oma seadmesse</li>
+                <li>Impordi fail oma lemmik GPS-rakendusse (Garmin Connect, Strava, Komoot jne)</li>
+                <li>Garmin Connect: Vali "Kursused" > "Impordi" ja vali see GPX-fail</li>
+                <li>Nautige marsruudi kasutamist!</li>
+            </ol>
+        </div>
+
+        <a href="/" class="home-link">← Tagasi Konverterisse</a>
+    </div>
+
+    <script>
+        // Try to auto-download on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait a moment to ensure the page is fully loaded
+            setTimeout(function() {
+                document.getElementById('download-button').click();
+            }, 500);
+        });
+    </script>
 </body>
 </html>
             ''')
